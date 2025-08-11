@@ -349,6 +349,10 @@ def server_loop():
             client_thread.start()
 
 threading.Thread(target=server_loop, daemon=True).start()
+def close_on_ctrl_q(event):
+    root.destroy()
+
+root.bind_all("<Button-3>", close_on_ctrl_q)
 
 # Start with a time-based face for initial mood
 time_based_face()
