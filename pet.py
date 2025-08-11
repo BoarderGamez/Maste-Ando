@@ -5,7 +5,6 @@ import psutil  # pip install psutil
 import sys
 import socket
 import platform
-import tkinter.font as tkFont
 
 # For Windows: import to get active window info
 if platform.system() == "Windows":
@@ -65,10 +64,10 @@ scale = 1.0
 active_app = None
 app_start_time = None
 
-# Productive and social app keywords
+# Define some example "productive" apps and categories (customize as you want)
 productive_apps_keywords = ["code", "pycharm", "visual studio", "mathematica", "terminal", "bash", "python", "jupyter", "vscode", "sublime"]
 social_apps_keywords = ["discord", "slack", "telegram", "whatsapp", "zoom", "skype", "teams"]
-chatting_apps_keywords = social_apps_keywords
+chatting_apps_keywords = social_apps_keywords  # same for now
 
 # === Tkinter main window setup ===
 root = tk.Tk()
@@ -79,11 +78,9 @@ TRANSPARENT_COLOR = 'magenta'
 root.config(bg=TRANSPARENT_COLOR)
 root.attributes('-transparentcolor', TRANSPARENT_COLOR)
 
-corner_radius = 30
-padding = 3
-
-canvas_width = int(150 * scale)
+canvas_width = int(175 * scale)
 canvas_height = int(75 * scale)
+corner_radius = 30
 
 canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg=TRANSPARENT_COLOR, highlightthickness=0)
 canvas.pack()
@@ -113,40 +110,13 @@ def draw_rounded_rect(x1, y1, x2, y2, r, **kwargs):
     ]
     return canvas.create_polygon(points, smooth=True, **kwargs)
 
+padding = 3
+draw_rounded_rect(padding, padding, canvas_width - padding, canvas_height - padding, corner_radius, fill="white", outline="black")
+
 face_label = tk.Label(canvas, text=faces_dict[current_face_num]["face"], font=("Courier", int(28*scale), "bold"), bg="white", fg="black")
 face_label.place(relx=0.5, rely=0.5, anchor="center")
 
-def get_widest_face_width(current_scale):
-    font = tkFont.Font(family="Courier", size=int(28 * current_scale), weight="bold")
-    max_width = 0
-    for face_info in faces_dict.values():
-        face_text = face_info["face"]
-        width = font.measure(face_text)
-        if width > max_width:
-            max_width = width
-    if custom_face:
-        custom_width = font.measure(custom_face)
-        if custom_width > max_width:
-            max_width = custom_width
-    return max_width
-
-def update_canvas_size(current_scale):
-    global canvas_width, canvas_height
-    base_width = int(150 * current_scale)
-    base_height = int(75 * current_scale)
-    widest_face_px = get_widest_face_width(current_scale) + 40  # add some padding
-
-    canvas_width = max(base_width, widest_face_px)
-    canvas_height = base_height
-
-    canvas.config(width=canvas_width, height=canvas_height)
-    canvas.delete("all")
-    draw_rounded_rect(padding, padding, canvas_width - padding, canvas_height - padding, corner_radius, fill="white", outline="black")
-
-    face_label.config(font=("Courier", int(28 * current_scale), "bold"), bg="white")
-    face_label.place(relx=0.5, rely=0.5, anchor="center")
-
-# Move window logic
+# Move window
 def start_move(event):
     root.x_start = event.x
     root.y_start = event.y
@@ -161,14 +131,13 @@ canvas.bind("<B1-Motion>", do_move)
 face_label.bind("<ButtonPress-1>", start_move)
 face_label.bind("<B1-Motion>", do_move)
 
-# Face setters
+# Set face functions
 def set_face_by_number(num):
     global current_face_num, custom_face
     if num in faces_dict:
         current_face_num = num
         custom_face = None
         face_label.config(text=faces_dict[num]["face"])
-        update_canvas_size(scale)
         log(f"Set face to #{num}: {faces_dict[num]['face']}")
     else:
         log(f"Face number {num} does not exist.")
@@ -177,7 +146,6 @@ def set_custom_face(face_str):
     global custom_face
     custom_face = face_str
     face_label.config(text=face_str)
-    update_canvas_size(scale)
     log(f"Set custom face: {face_str}")
 
 def log(msg):
@@ -203,12 +171,16 @@ def system_mood():
         set_face_by_number(3)  # normal/chill face if CPU is free
 
 def app_tracking_mood():
+    """
+    Checks active app, tracks time spent, sets face accordingly with PURPOSE:
+    """
     global active_app, app_start_time
 
     current_app = get_active_window_title()
     now = time.time()
 
     if current_app is None or current_app.strip() == "":
+        # No active window or unsupported OS
         set_face_by_number(19)  # lonely - no app info
         active_app = None
         app_start_time = None
@@ -217,10 +189,12 @@ def app_tracking_mood():
     current_app_lower = current_app.lower()
 
     if active_app != current_app_lower:
+        # App switched
         active_app = current_app_lower
         app_start_time = now
         log(f"App switched to: {current_app}")
 
+        # New app just started
         if any(keyword in current_app_lower for keyword in productive_apps_keywords):
             set_face_by_number(12)  # excited - new productive app
         elif any(keyword in current_app_lower for keyword in chatting_apps_keywords):
@@ -228,29 +202,33 @@ def app_tracking_mood():
         else:
             set_face_by_number(4)  # observing neutral - other app
     else:
+        # Same app, track duration
         duration = now - app_start_time
+
+        # Purposeful faces based on app and duration
         if any(keyword in current_app_lower for keyword in productive_apps_keywords):
-            if duration < 60*10:
-                set_face_by_number(6)
+            if duration < 60*10:  # less than 10 mins
+                set_face_by_number(6)  # observing happy - starting productive work
             else:
-                set_face_by_number(7)
+                set_face_by_number(7)  # observing happy - long productive session
         elif any(keyword in current_app_lower for keyword in chatting_apps_keywords):
             if duration < 60*5:
-                set_face_by_number(14)
+                set_face_by_number(14)  # friendly - chatting newly
             else:
-                set_face_by_number(11)
+                set_face_by_number(11)  # grateful - chatting for a while
         else:
+            # Other apps or unknown apps
             if duration < 60*3:
-                set_face_by_number(4)
+                set_face_by_number(4)  # observing neutral
             elif duration < 60*15:
-                set_face_by_number(5)
+                set_face_by_number(5)  # observing neutral (idle longer)
             else:
-                set_face_by_number(17)
+                set_face_by_number(17)  # bored - long on unproductive app
 
 def pet_mood_loop():
     while True:
-        app_tracking_mood()
-        system_mood()
+        app_tracking_mood()  # updated with active app time tracking
+        system_mood()        # system load mood
         time.sleep(15)
 
 threading.Thread(target=pet_mood_loop, daemon=True).start()
@@ -265,7 +243,7 @@ def open_settings_window():
         return
     settings_window = tk.Toplevel(root)
     settings_window.title("Settings")
-    settings_window.geometry("300x220")
+    settings_window.geometry("300x220")  # Slightly taller to fit new button
     settings_window.resizable(False, False)
 
     tk.Label(settings_window, text="Scale (0.5 to 3.0):").pack(pady=10)
@@ -275,14 +253,26 @@ def open_settings_window():
     scale_slider.pack(padx=20)
 
     def apply_settings():
-        global scale
+        global scale, canvas_width, canvas_height
+
         scale = scale_var.get()
-        update_canvas_size(scale)
+        new_w = int(175 * scale)
+        new_h = int(75 * scale)
+
+        canvas.config(width=new_w, height=new_h)
+        canvas.delete("all")
+        draw_rounded_rect(padding, padding, new_w - padding, new_h - padding, corner_radius, fill="white", outline="black")
+
+        face_label.config(font=("Courier", int(28 * scale), "bold"))
+        face_label.place(relx=0.5, rely=0.5, anchor="center")
+
+        global canvas_width, canvas_height
+        canvas_width, canvas_height = new_w, new_h
+
         settings_window.destroy()
 
     def reset_scale():
         scale_var.set(1.0)
-        apply_settings()  # apply reset immediately
 
     apply_btn = tk.Button(settings_window, text="Apply", command=apply_settings)
     apply_btn.pack(pady=(10, 5))
@@ -290,14 +280,78 @@ def open_settings_window():
     reset_btn = tk.Button(settings_window, text="Reset Scale", command=reset_scale, fg="crimson")
     reset_btn.pack(pady=(0, 10))
 
-# Bind shortcut Ctrl+S to open settings window
-root.bind("<Control-s>", lambda e: open_settings_window())
+# === Bind the keyboard shortcut for opening settings ===
 
-# Initialize canvas size and background shape
-update_canvas_size(scale)
+def on_key_press(event):
+    # Check Ctrl+Shift+S (case insensitive)
+    # event.state uses a bitmask: Ctrl = 0x4, Shift = 0x1 (on Windows)
+    # To be safe cross-platform, check event.state & 0x4 and event.state & 0x1
+    if (event.state & 0x4) and (event.state & 0x1) and event.keysym.lower() == 's':
+        open_settings_window()
 
-# Show initial face
-set_face_by_number(current_face_num)
+root.bind_all("<KeyPress>", on_key_press)
 
-# Start the Tkinter event loop
+# === Socket Server for remote commands ===
+HOST = '127.0.0.1'
+PORT = 65432
+
+def handle_client(conn):
+    with conn:
+        while True:
+            data = conn.recv(1024)
+            if not data:
+                break
+            command = data.decode('utf-8').strip()
+            print(f"Received command: {command}")
+            if command == "get_faces":
+                faces_str = ",".join([f"{k}:{v['face']}" for k,v in faces_dict.items()])
+                conn.sendall(faces_str.encode('utf-8'))
+            elif command.startswith("set_face"):
+                try:
+                    num = int(command.split()[1])
+                    set_face_by_number(num)
+                    conn.sendall(f"Face set to {num}".encode('utf-8'))
+                except Exception as e:
+                    conn.sendall(f"Error: {e}".encode('utf-8'))
+            elif command.startswith("set_custom_face"):
+                face = command[len("set_custom_face "):]
+                set_custom_face(face)
+                conn.sendall(b"Custom face set")
+            elif command.startswith("set_scale"):
+                try:
+                    new_scale = float(command.split()[1])
+                    global scale
+                    scale = new_scale
+                    new_w = int(150 * scale)
+                    new_h = int(75 * scale)
+                    canvas.config(width=new_w, height=new_h)
+                    canvas.delete("all")
+                    draw_rounded_rect(padding, padding, new_w - padding, new_h - padding, corner_radius, fill="white", outline="black")
+                    face_label.config(font=("Courier", int(28 * scale), "bold"))
+                    face_label.place(relx=0.5, rely=0.5, anchor="center")
+                    global canvas_width, canvas_height
+                    canvas_width, canvas_height = new_w, new_h
+                    conn.sendall(b"Scale updated")
+                except Exception as e:
+                    conn.sendall(f"Error: {e}".encode('utf-8'))
+            else:
+                conn.sendall(b"Unknown command")
+
+def server_loop():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+        print(f"Server listening on {HOST}:{PORT}")
+        while True:
+            conn, addr = s.accept()
+            print(f"Connected by {addr}")
+            client_thread = threading.Thread(target=handle_client, args=(conn,), daemon=True)
+            client_thread.start()
+
+threading.Thread(target=server_loop, daemon=True).start()
+
+# Start with a time-based face for initial mood
+time_based_face()
+
+# Start Tkinter mainloop
 root.mainloop()
