@@ -58,9 +58,8 @@ Want to change how the mood logic works? Just tweak the functions: `time_based_f
 ## License
 
 Free to use, share, and remix!  
-Made with love and math by Sigma boy 🏳️‍🌈
+Made with love by me
 
 ---
 
-**Enjoy your new mood buddy!**  
 If you want me to help with updates or features, just shout!
