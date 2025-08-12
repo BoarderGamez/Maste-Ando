@@ -12,7 +12,7 @@ class DevMenu(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Pet DevMenu")
-        self.geometry("470x520")
+        self.geometry("470x800")
         self.resizable(False, True)
 
         self.current_face_num = None
